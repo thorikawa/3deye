@@ -24,7 +24,7 @@ void draw(void) {
                GL_SHININESS, shininess);
   glMaterialfv(GL_FRONT_AND_BACK,
                GL_DIFFUSE, teapotColor);
-  glTranslated(-0., -2.00, -3.5);
+  glTranslated(-0., -0.60, 0);
   glutSolidSphere(0.1, 16, 16);
   glPopMatrix();
   
