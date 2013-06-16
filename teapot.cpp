@@ -13,6 +13,7 @@ GLfloat specularcolor[] = { 0.3, 0.3, 0.3, 1.0 };
 GLfloat shininess[] = { 80 };
 
 double angle = 0;
+double eyepos = 0;
 
 void draw(void) {
   int i, j, k;
@@ -54,7 +55,7 @@ void display(void) {
   // カメラの位置，向きの設定
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  gluLookAt(0.4, 0.0, 2.0,
+  gluLookAt(eyepos, 0.0, 2.0,
             0.0, 0.0, 0.0,
             0.0, 1.0, 0.0);
   // 光源位置の設定
@@ -95,6 +96,11 @@ int main(int argc, char *argv[]) {
   //glutEnterGameMode();
   
   //glutCreateWindow(argv[0]);
+  if (argc > 1) {
+    printf("%s\n", argv[1]);
+    eyepos = atof(argv[1]);
+  }
+
   glutDisplayFunc(display);
   glutIdleFunc(idle);
   glutKeyboardFunc(keyboard);
