@@ -1,1 +1,1 @@
-g++ -I/System/Library/Frameworks/GLUT.framework/Headers -I${OPENCV_HOME}/include -framework GLUT -framework OpenGL -lobjc playland.cpp -o playland && ./playland
+g++ -I/System/Library/Frameworks/GLUT.framework/Headers -I${OPENCV_HOME}/include -L${OPENCV_HOME}/lib -lopencv_core -lopencv_highgui -framework GLUT -framework OpenGL -lobjc playland.cpp -o playland && ./playland 0.1

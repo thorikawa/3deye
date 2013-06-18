@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <glut.h>
+#include <opencv2/opencv.hpp>
 
 GLfloat lightpos[] = { -1.0, 3.0, 5.0, 0.0 };
 GLfloat lightcolor[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -8,8 +9,21 @@ GLfloat teapotColor[] = { 0.6, 0.8, 0.4, 1.0 };
 GLfloat specularcolor[] = { 0.3, 0.3, 0.3, 1.0 };
 GLfloat shininess[] = { 80 };
 
+#define WIDTH 800
+#define HEIGHT 600
+
 double angle = 0;
 double eyepos = 0;
+
+void screenshot (const char* filename) {
+  cv::Mat img(HEIGHT, WIDTH, CV_8UC3);
+  cv::Mat flipped(HEIGHT, WIDTH, CV_8UC3);
+  glPixelStorei(GL_PACK_ALIGNMENT, (img.step & 3) ? 1 : 4);
+  glPixelStorei(GL_PACK_ROW_LENGTH, img.step/img.elemSize());
+  glReadPixels(0, 0, img.cols, img.rows, GL_BGR, GL_UNSIGNED_BYTE, img.data);
+  cv::flip(img, flipped, 0);
+  imwrite(filename, flipped);
+}
 
 void drawSolidShape (double a, double b, double c, double x, double y, double z) {
   GLdouble vertex[][3] = {
@@ -70,10 +84,22 @@ void draw(void) {
   glPopMatrix();
   
   glPushMatrix();
-  glRotatef(24, 1.0, 1.0, 1.0);
-  drawSolidShape(0.3, 0.3, 2.3, 0, 0, 0);
+  glRotatef(-10, 0.0, 1.0, 0.0);
+  drawSolidShape(0.3, 0.3, 2.3, -0.4, 0, 0);
+  drawSolidShape(0.3, 0.3, 2.3, 0.0, 0, 0);
+  drawSolidShape(0.3, 0.3, 2.3, 0.4, 0, 0);
+  glPopMatrix();
+
+  glPushMatrix();
+  glRotatef(-100, 0.0, 1.0, 0.0);
+  drawSolidShape(0.1, 0.1, 3.3, -0.4, 0, 0);
+  drawSolidShape(0.1, 0.1, 3.3, 0.0, 0, 0);
+  drawSolidShape(0.1, 0.1, 3.3, 0.4, 0, 0);
+  drawSolidShape(0.1, 0.1, 3.3, 0.8, 0, 0);
   glPopMatrix();
 }
+
+int frame = 0;
 
 void display(void) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -82,13 +108,28 @@ void display(void) {
   gluPerspective(50, 1.0, 1.0, 100.0);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  gluLookAt(eyepos, 0.0, 2.0,
-            0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0);
+  
+  char filename[256];
+  if (frame == 0) {
+    gluLookAt(eyepos-0.1, 1.0, 2.0,
+              -0.1, 0.0, 0.0,
+              0.0, 1.0, 0.0);
+    sprintf(filename, "playland_r.jpg");
+  } else if (frame == 1) {
+    gluLookAt(-eyepos-0.1, 1.0, 2.0,
+              -0.1, 0.0, 0.0,
+              0.0, 1.0, 0.0);
+    sprintf(filename, "playland_l.jpg");
+  } else {
+    exit(-1);
+  }
   glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
   draw();
   
   glutSwapBuffers();
+  
+  screenshot(filename);
+  frame++;
 }
 
 void idle(void) {
@@ -108,10 +149,10 @@ void keyboard (unsigned char key, int x, int y) {
 
 int main(int argc, char *argv[]) {
   glutInit(&argc, argv);
-  glutCreateWindow("title");
-  glutInitWindowSize(800,600);
+  glutInitWindowSize(WIDTH, HEIGHT);
   glutInitWindowPosition(100,100);
-  glutFullScreen();
+  glutCreateWindow("title");
+  //glutFullScreen();
   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE
                       | GLUT_DEPTH);
   if (argc > 1) {
