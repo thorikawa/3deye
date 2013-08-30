@@ -29,6 +29,8 @@ public:
     void start(Calibrator::Eye eye);
     bool calibrate(IplImage* inputImage, IplImage *destImg);
     CvPoint convertCoordinates(CvPoint p);
-};	
+    // The left top point of chess board on camera
+    CvPoint leftTop;
+};
 
 #endif

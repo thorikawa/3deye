@@ -1,6 +1,7 @@
 #include "calibrator.hpp"
 
 #define WINDOW_NAME "calibrator"
+#define MONITOR_NAME "monitor"
 
 Calibrator::Calibrator():notFindCount(0),prevfind(false),color(CV_RGB(255,255,255)),phase(0),skipCount(0) {
     chessboard = cvLoadImage("chessboard.jpg");
@@ -12,7 +13,8 @@ Calibrator::Calibrator():notFindCount(0),prevfind(false),color(CV_RGB(255,255,25
 
 void Calibrator::start(Calibrator::Eye eye) {
 
-    cvNamedWindow(WINDOW_NAME,0);
+    cvNamedWindow(WINDOW_NAME, 0);
+    cvNamedWindow(MONITOR_NAME, 0);
 
     if (eye == Calibrator::LEFT) {
         printf("left eye calibration\n");
@@ -21,6 +23,7 @@ void Calibrator::start(Calibrator::Eye eye) {
         printf("right eye calibration\n");
         cvMoveWindow(WINDOW_NAME, RIGHT_X_OFFSET, 0);
     }
+    cvMoveWindow(MONITOR_NAME, MONITOR_X_OFFSET, 0);
 
     CvCapture* capture = cvCreateCameraCapture(0);
 	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, IN_WIDTH);
@@ -33,11 +36,22 @@ void Calibrator::start(Calibrator::Eye eye) {
         if (!frame) {
             continue;
         }
-        calibrate(frame, dst);
+        if (calibrate(frame, dst)) {
+            printf("calibration done\n");
+            break;
+        }
+        cvShowImage(MONITOR_NAME, frame);
         cvShowImage(WINDOW_NAME, dst);
+
+        char c = cvWaitKey(2);
+		if (c == '\x1b')
+			break;
     }
 
+    cvReleaseImage(&dst);
     cvReleaseCapture(&capture);
+    cvDestroyWindow(WINDOW_NAME);
+    cvDestroyWindow(MONITOR_NAME);
 }
 
 bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
@@ -83,6 +97,7 @@ bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
         dstPoints[1] = corners[CORNER_COLUMN-1];
         dstPoints[2] = corners[(CORNER_ROW-1)*CORNER_COLUMN];
         dstPoints[3] = corners[CORNER_COUNT-1];
+        leftTop = cvPoint((int)dstPoints[0].x, (int)dstPoints[0].y);
         for (int i=0; i<4; i++) {
             printf("corner[%d] = (%f, %f)\n", i, dstPoints[i].x, dstPoints[i].y);
         }
