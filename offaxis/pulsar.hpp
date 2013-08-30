@@ -24,7 +24,7 @@ typedef struct {
     int screenwidth,screenheight;
 } CAMERA;
 
-int start (int argc, char *argv[]);
+int start(int argc, char *argv[], int loffset, int roffset);
 void Display(void);
 void CreateEnvironment(void);
 void MakeGeometry(void);

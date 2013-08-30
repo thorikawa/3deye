@@ -17,10 +17,10 @@ void Calibrator::start(Calibrator::Eye eye) {
     cvNamedWindow(MONITOR_NAME, 0);
 
     if (eye == Calibrator::LEFT) {
-        printf("left eye calibration\n");
+        fprintf(stderr, "left eye calibration\n");
         cvMoveWindow(WINDOW_NAME, LEFT_X_OFFSET, 0);
     } else if (eye == Calibrator::RIGHT) {
-        printf("right eye calibration\n");
+        fprintf(stderr, "right eye calibration\n");
         cvMoveWindow(WINDOW_NAME, RIGHT_X_OFFSET, 0);
     }
     cvMoveWindow(MONITOR_NAME, MONITOR_X_OFFSET, 0);
@@ -37,7 +37,7 @@ void Calibrator::start(Calibrator::Eye eye) {
             continue;
         }
         if (calibrate(frame, dst)) {
-            printf("calibration done\n");
+            fprintf(stderr, "calibration done\n");
             break;
         }
         cvShowImage(MONITOR_NAME, frame);
@@ -64,7 +64,7 @@ bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
     int offy = (HEIGHT - ch) / 2;
     int tw   = cw;
     int th   = ch;
-    //printf("%d %d %d %d\n", offx, offy, tw, th);
+
     cvSetImageROI(destImage, cvRect(offx, offy, tw, th));
     cvCopy(chessboard, destImage);
     cvResetImageROI(destImage);
@@ -76,7 +76,7 @@ bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
     CvSize patternSize = cvSize(CORNER_COLUMN, CORNER_ROW);
     CvPoint2D32f* corners = (CvPoint2D32f*)cvAlloc(sizeof(CvPoint2D32f) * CORNER_COUNT);
     int ret = cvFindChessboardCorners(inputImage, patternSize, corners, &cornerCount);
-    printf("chess ret=%d corners=%d\n", ret, cornerCount);
+    fprintf(stderr, "chess ret=%d corners=%d\n", ret, cornerCount);
     if (ret) {
         if (++skipCount < 5) {
             return false;
@@ -99,14 +99,14 @@ bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
         dstPoints[3] = corners[CORNER_COUNT-1];
         leftTop = cvPoint((int)dstPoints[0].x, (int)dstPoints[0].y);
         for (int i=0; i<4; i++) {
-            printf("corner[%d] = (%f, %f)\n", i, dstPoints[i].x, dstPoints[i].y);
+            fprintf(stderr, "corner[%d] = (%f, %f)\n", i, dstPoints[i].x, dstPoints[i].y);
         }
         
         CvMat srcMat = cvMat(1, 4, CV_32FC2, srcPoints);
         CvMat dstMat = cvMat(1, 4, CV_32FC2, dstPoints);
 
         if (!cvFindHomography(&dstMat, &srcMat, &homography, CV_RANSAC, 5)) {
-            printf("error findHomography\n");
+            fprintf(stderr, "error findHomography\n");
             return false;
         }
         
@@ -156,6 +156,6 @@ CvPoint Calibrator::convertCoordinates (CvPoint p) {
     double x = CV_MAT_ELEM(*dst, double, 0, 0);
     double y = CV_MAT_ELEM(*dst, double, 1, 0);
     double z = CV_MAT_ELEM(*dst, double, 2, 0);
-    printf("%f %f %f\n", x, y, z);
+    fprintf(stderr, "%f %f %f\n", x, y, z);
     return cvPoint((int)(x/z), (int)(y/z));
 }

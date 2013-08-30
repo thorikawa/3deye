@@ -35,13 +35,11 @@ double rotateangle = 0.0;    /* Pulsar Rotation angle */
 int leftwindow;
 int rightwindow;
 
-int loffset = -1200;
-int roffset = 1500;
-
-int start (int argc, char *argv[]) {
+int start (int argc, char *argv[], int loffset, int roffset) {
    int i;
    int mainmenu,speedmenu,spinmenu;
 
+    printf("opengl start %d,%d\n", loffset, roffset);
    //camera.screenwidth = 400;
    //camera.screenheight = 300;
    camera.screenwidth = 1280;
