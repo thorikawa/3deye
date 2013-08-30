@@ -1,59 +1,10 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <glut.h>
-#include "glcv.hpp"
+#include "pulsar.hpp"
 
 /*
    Demonstration OpenGL application
    Create a model of a pulsar
 */
-
-typedef struct {
-   double x,y,z;
-} XYZ;
-typedef struct {
-   double r,g,b;
-} COLOUR;
-typedef struct {
-   unsigned char r,g,b,a;
-} PIXELA;
-typedef struct {
-   XYZ vp;              /* View position           */
-   XYZ vd;              /* View direction vector   */
-   XYZ vu;              /* View up direction       */
-   XYZ pr;              /* Point to rotate about   */
-   double focallength;  /* Focal Length along vd   */
-   double aperture;     /* Camera aperture         */
-   double eyesep;       /* Eye separation          */
-   int screenwidth,screenheight;
-} CAMERA;
-
-void Display(void);
-void CreateEnvironment(void);
-void MakeGeometry(void);
-void MakeLighting(void);
-void HandleKeyboard(unsigned char key,int x, int y);
-void HandleSpecialKeyboard(int key,int x, int y);
-void HandleMouse(int,int,int,int);
-void HandleMainMenu(int);
-void HandleSpeedMenu(int);
-void HandleSpinMenu(int);
-void HandleVisibility(int vis);
-void HandleReshape(int,int);
-void HandleMouseMotion(int,int);
-void HandlePassiveMotion(int,int);
-void HandleIdle(void);
-void GiveUsage(char *);
-void RotateCamera(int,int,int);
-void TranslateCamera(int,int);
-void CameraHome(int);
-void Normalise(XYZ *);
-XYZ  CalcNormal(XYZ,XYZ,XYZ);
-
 #define ABS(x) (x < 0 ? -(x) : (x))
-//#define MIN(x,y) (x < y ? x : y)
-//#define MAX(x,y) (x > y ? x : y)
 #define TRUE  1
 #define FALSE 0
 #define ESC 27
@@ -67,27 +18,34 @@ XYZ  CalcNormal(XYZ,XYZ,XYZ);
 
 /* Flags */
 int fullscreen = FALSE;
-int stereo = FALSE;
 int showconstruct = FALSE;
 int windowdump = FALSE;
-int record = FALSE;
 int debug = FALSE;
+int rotate = TRUE;
 
 int currentbutton = -1;
-double rotatespeed = 1;
+double rotatespeed = 0.3;
 double dtheta = 1;
 CAMERA camera;
 XYZ origin = {0.0,0.0,0.0};
 
 double rotateangle = 0.0;    /* Pulsar Rotation angle */
 
-int main(int argc,char **argv)
-{
+// for stereo
+int leftwindow;
+int rightwindow;
+
+int loffset = -1200;
+int roffset = 1500;
+
+int start (int argc, char *argv[]) {
    int i;
    int mainmenu,speedmenu,spinmenu;
 
-   camera.screenwidth = 400;
-   camera.screenheight = 300;
+   //camera.screenwidth = 400;
+   //camera.screenheight = 300;
+   camera.screenwidth = 1280;
+   camera.screenheight = 768;
 
    /* Parse the command line arguments */
    for (i=1;i<argc;i++) {
@@ -95,8 +53,6 @@ int main(int argc,char **argv)
          GiveUsage(argv[0]);
       if (strstr(argv[i],"-f") != NULL)
          fullscreen = TRUE;
-      if (strstr(argv[i],"-s") != NULL)
-         stereo = TRUE;
       if (strstr(argv[i],"-d") != NULL)
          debug = TRUE;
       if (strstr(argv[i],"-c") != NULL)
@@ -105,13 +61,12 @@ int main(int argc,char **argv)
 
    /* Set things up and go */
    glutInit(&argc,argv);
-   if (!stereo)
-      glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-   else
-      glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STEREO);
+   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
-   glutCreateWindow("Pulsar model");
-   glutReshapeWindow(200,180);
+   leftwindow = glutCreateWindow("Left");
+   //glutReshapeWindow(200,180);
+   glutReshapeWindow(1280,768);
+   glutPositionWindow(loffset,100);
    if (fullscreen)
       glutFullScreen();
    glutDisplayFunc(Display);
@@ -124,6 +79,21 @@ int main(int argc,char **argv)
    glutSetCursor(GLUT_CURSOR_NONE);
    CreateEnvironment();
    CameraHome(0);
+    
+    // rightwindow
+    rightwindow = glutCreateWindow("Right");
+    glutReshapeWindow(1280,768);
+    glutPositionWindow(roffset,100);
+    glutDisplayFunc(Display);
+    glutReshapeFunc(HandleReshape);
+    glutVisibilityFunc(HandleVisibility);
+    glutKeyboardFunc(HandleKeyboard);
+    glutSpecialFunc(HandleSpecialKeyboard);
+    glutMouseFunc(HandleMouse);
+    glutMotionFunc(HandleMouseMotion);
+    glutSetCursor(GLUT_CURSOR_NONE);
+    CreateEnvironment();
+    CameraHome(0);
 
    /* Set up the speed menu */
    speedmenu = glutCreateMenu(HandleSpeedMenu);
@@ -157,8 +127,7 @@ int main(int argc,char **argv)
    This is where global OpenGL/GLUT settings are made, 
    that is, things that will not change in time 
 */
-void CreateEnvironment(void)
-{
+void CreateEnvironment (void) {
    glEnable(GL_DEPTH_TEST);
    glDisable(GL_LINE_SMOOTH);
    glDisable(GL_POINT_SMOOTH);
@@ -183,110 +152,96 @@ void CreateEnvironment(void)
    It creates the geometry, lighting, and viewing position
    In this case it rotates the camera around the scene
 */
-void Display(void)
-{
-   XYZ r;
-   double dist,ratio,radians,scale,wd2,ndfl;
-   double left,right,top,bottom,near=0.1,far=10000;
+void Display (void) {
+    XYZ r;
+    double dist,ratio,radians,scale,wd2,ndfl;
+    double left,right,top,bottom,near=0.1,far=10000;
 
-   /* Clip to avoid extreme stereo */
-   if (stereo)
-      near = camera.focallength / 5;
+    int window = glutGetWindow();
+    
+    /* Clip to avoid extreme stereo */
+    //if (stereo) {
+        near = camera.focallength / 5;
+    //}
 
-   /* Misc stuff */
-   ratio  = camera.screenwidth / (double)camera.screenheight;
-   radians = DTOR * camera.aperture / 2;
-   wd2     = near * tan(radians);
-   ndfl    = near / camera.focallength;
+    /* Misc stuff */
+    ratio  = camera.screenwidth / (double)camera.screenheight;
+    radians = DTOR * camera.aperture / 2;
+    wd2     = near * tan(radians);
+    ndfl    = near / camera.focallength;
 
-   if (stereo) {
+    /* Derive the two eye positions */
+    CROSSPROD(camera.vd,camera.vu,r);
+    Normalise(&r);
+    r.x *= camera.eyesep / 2.0;
+    r.y *= camera.eyesep / 2.0;
+    r.z *= camera.eyesep / 2.0;
 
-      /* Derive the two eye positions */
-      CROSSPROD(camera.vd,camera.vu,r);
-      Normalise(&r);
-      r.x *= camera.eyesep / 2.0;
-      r.y *= camera.eyesep / 2.0;
-      r.z *= camera.eyesep / 2.0;
+    // for right eye
+    if (window == rightwindow) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        left  = - ratio * wd2 - 0.5 * camera.eyesep * ndfl;
+        right =   ratio * wd2 - 0.5 * camera.eyesep * ndfl;
+        top    =   wd2;
+        bottom = - wd2;
+        glFrustum(left,right,bottom,top,near,far);
 
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      left  = - ratio * wd2 - 0.5 * camera.eyesep * ndfl;
-      right =   ratio * wd2 - 0.5 * camera.eyesep * ndfl;
-      top    =   wd2;
-      bottom = - wd2;
-      glFrustum(left,right,bottom,top,near,far);
+        glMatrixMode(GL_MODELVIEW);
+        glDrawBuffer(GL_BACK_RIGHT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glLoadIdentity();
+        gluLookAt(camera.vp.x + r.x,camera.vp.y + r.y,camera.vp.z + r.z,
+                  camera.vp.x + r.x + camera.vd.x,
+                  camera.vp.y + r.y + camera.vd.y,
+                  camera.vp.z + r.z + camera.vd.z,
+                  camera.vu.x,camera.vu.y,camera.vu.z);
+        MakeLighting();
+        MakeGeometry();
+        if (windowdump) {
+            screenshot(camera.screenwidth,camera.screenheight,"pulsar_r.jpg", GL_BACK_RIGHT);
+        }
+    }
 
-      glMatrixMode(GL_MODELVIEW);
-      glDrawBuffer(GL_BACK_RIGHT);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glLoadIdentity();
-      gluLookAt(camera.vp.x + r.x,camera.vp.y + r.y,camera.vp.z + r.z,
-                camera.vp.x + r.x + camera.vd.x,
-                camera.vp.y + r.y + camera.vd.y,
-                camera.vp.z + r.z + camera.vd.z,
-                camera.vu.x,camera.vu.y,camera.vu.z);
-      MakeLighting();
-      MakeGeometry();
+    // for left eye
+    else if (window == leftwindow) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        left  = - ratio * wd2 + 0.5 * camera.eyesep * ndfl;
+        right =   ratio * wd2 + 0.5 * camera.eyesep * ndfl;
+        top    =   wd2;
+        bottom = - wd2;
+        glFrustum(left,right,bottom,top,near,far);
 
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      left  = - ratio * wd2 + 0.5 * camera.eyesep * ndfl;
-      right =   ratio * wd2 + 0.5 * camera.eyesep * ndfl;
-      top    =   wd2;
-      bottom = - wd2;
-      glFrustum(left,right,bottom,top,near,far);
+        glMatrixMode(GL_MODELVIEW);
+        glDrawBuffer(GL_BACK_LEFT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glLoadIdentity();
+        gluLookAt(camera.vp.x - r.x,camera.vp.y - r.y,camera.vp.z - r.z,
+                  camera.vp.x - r.x + camera.vd.x,
+                  camera.vp.y - r.y + camera.vd.y,
+                  camera.vp.z - r.z + camera.vd.z,
+                  camera.vu.x,camera.vu.y,camera.vu.z);
+        MakeLighting();
+        MakeGeometry();
+        if (windowdump) {
+            screenshot(camera.screenwidth,camera.screenheight,"pulsar_l.jpg", GL_BACK_LEFT);
+        }
+    }
 
-      glMatrixMode(GL_MODELVIEW);
-      glDrawBuffer(GL_BACK_LEFT);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glLoadIdentity();
-      gluLookAt(camera.vp.x - r.x,camera.vp.y - r.y,camera.vp.z - r.z,
-                camera.vp.x - r.x + camera.vd.x,
-                camera.vp.y - r.y + camera.vd.y,
-                camera.vp.z - r.z + camera.vd.z,
-                camera.vu.x,camera.vu.y,camera.vu.z);
-      MakeLighting();
-      MakeGeometry();
+    /* glFlush(); This isn't necessary for double buffers */
+    glutSwapBuffers();
 
-   } else {
+    if (windowdump) {
+        windowdump = !windowdump;
+    }
 
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      left  = - ratio * wd2;
-      right =   ratio * wd2;
-      top    =   wd2;
-      bottom = - wd2;
-      glFrustum(left,right,bottom,top,near,far);
-
-      glMatrixMode(GL_MODELVIEW);
-      glDrawBuffer(GL_BACK);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glLoadIdentity();
-      gluLookAt(camera.vp.x,camera.vp.y,camera.vp.z,
-                camera.vp.x + camera.vd.x,
-                camera.vp.y + camera.vd.y,
-                camera.vp.z + camera.vd.z,
-                camera.vu.x,camera.vu.y,camera.vu.z);
-      MakeLighting();
-      MakeGeometry();
-   }
-
-   /* glFlush(); This isn't necessary for double buffers */
-   glutSwapBuffers();
-
-   if (record || windowdump)
-  screenshot(camera.screenwidth,camera.screenheight,"pulsar_l.jpg", GL_BACK_LEFT);
-  screenshot(camera.screenwidth,camera.screenheight,"pulsar_r.jpg", GL_BACK_RIGHT);
-
-   /* Next angle for rotating the pulsar */
-   rotateangle += rotatespeed;
 }
 
 /*
    Create the geometry for the pulsar
 */
-void MakeGeometry(void)
-{
+void MakeGeometry (void) {
    int i,j,k;
    double cradius = 5.3;         /* Final radius of the cone */
    double clength = 30;            /* Cone length */
@@ -428,8 +383,7 @@ void MakeGeometry(void)
 /*
    Set up the lighing environment
 */
-void MakeLighting(void)
-{
+void MakeLighting (void) {
    GLfloat fullambient[4] = {1.0,1.0,1.0,1.0};
    GLfloat position[4] = {0.0,0.0,0.0,0.0};
    GLfloat ambient[4]  = {0.2,0.2,0.2,1.0};
@@ -466,8 +420,7 @@ void MakeLighting(void)
 /*
    Deal with plain key strokes
 */
-void HandleKeyboard(unsigned char key,int x, int y)
-{
+void HandleKeyboard (unsigned char key,int x, int y) {
    switch (key) {
    case ESC:                            /* Quit */
    case 'Q':
@@ -510,7 +463,7 @@ void HandleKeyboard(unsigned char key,int x, int y)
       break;
    case 'r':
    case 'R':
-      record = !record;
+      rotate = !rotate;
       break;
    }
 }
@@ -518,8 +471,7 @@ void HandleKeyboard(unsigned char key,int x, int y)
 /*
    Deal with special key strokes
 */
-void HandleSpecialKeyboard(int key,int x, int y)
-{
+void HandleSpecialKeyboard (int key,int x, int y) {
    switch (key) {
    case GLUT_KEY_LEFT:
       RotateCamera(-1,0,0);
@@ -541,8 +493,7 @@ void HandleSpecialKeyboard(int key,int x, int y)
    ix,iy,iz are flags, 0 do nothing, +- 1 rotates in opposite directions
    Correctly updating all camera attributes
 */
-void RotateCamera(int ix,int iy,int iz)
-{
+void RotateCamera (int ix,int iy,int iz) {
    XYZ vp,vu,vd;
    XYZ right;
    XYZ newvp,newr;
@@ -611,8 +562,7 @@ void RotateCamera(int ix,int iy,int iz)
    In response to i,j,k,l keys
    Also move the camera rotate location in parallel
 */
-void TranslateCamera(int ix,int iy)
-{
+void TranslateCamera (int ix,int iy) {
    XYZ vp,vu,vd;
    XYZ right;
    XYZ newvp,newr;
@@ -647,8 +597,7 @@ void TranslateCamera(int ix,int iy)
    Handle mouse events
    Right button events are passed to menu handlers
 */
-void HandleMouse(int button,int state,int x,int y)
-{
+void HandleMouse (int button,int state,int x,int y) {
    if (state == GLUT_DOWN) {
       if (button == GLUT_LEFT_BUTTON) {
          currentbutton = GLUT_LEFT_BUTTON;
@@ -661,8 +610,7 @@ void HandleMouse(int button,int state,int x,int y)
 /*
    Handle the main menu
 */
-void HandleMainMenu(int whichone)
-{
+void HandleMainMenu (int whichone) {
    switch (whichone) {
    case 1:
       showconstruct = !showconstruct;
@@ -677,8 +625,7 @@ void HandleMainMenu(int whichone)
    Handle the speed menu
    The rotate speed is in degrees
 */
-void HandleSpeedMenu(int whichone)
-{
+void HandleSpeedMenu (int whichone) {
    switch (whichone) {
    case 1: rotatespeed = 0.0; break;
    case 2: rotatespeed = 0.3; break;
@@ -691,8 +638,7 @@ void HandleSpeedMenu(int whichone)
 /*
    Handle the camera spin menu
 */
-void HandleSpinMenu(int whichone)
-{
+void HandleSpinMenu (int whichone) {
    switch (whichone) {
    case 1: dtheta = 1; break;
    case 2: dtheta = 2; break;
@@ -704,8 +650,7 @@ void HandleSpinMenu(int whichone)
 /*
    How to handle visibility
 */
-void HandleVisibility(int visible)
-{
+void HandleVisibility (int visible) {
    if (visible == GLUT_VISIBLE)
       glutIdleFunc(HandleIdle);
    else
@@ -715,16 +660,23 @@ void HandleVisibility(int visible)
 /*
    What to do on an idle event
 */
-void HandleIdle(void)
-{
-   glutPostRedisplay();
+void HandleIdle (void) {
+    glutSetWindow(leftwindow);
+    glutPostRedisplay();
+    
+    glutSetWindow(rightwindow);
+    glutPostRedisplay();
+
+    if (rotate) {
+      /* Next angle for rotating the pulsar */
+      rotateangle += rotatespeed;
+    }
 }
 
 /*
    Handle a window reshape/resize
 */
-void HandleReshape(int w,int h)
-{
+void HandleReshape (int w,int h) {
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glViewport(0,0,(GLsizei)w,(GLsizei)h);
    camera.screenwidth = w;
@@ -734,12 +686,10 @@ void HandleReshape(int w,int h)
 /*
    Display the program usage information
 */
-void GiveUsage(char *cmd)
-{
+void GiveUsage (char *cmd) {
    fprintf(stderr,"Usage: %s [-h] [-f] [-s] [-c] [-q n]\n",cmd);
    fprintf(stderr,"          -h   this text\n");
    fprintf(stderr,"          -f   full screen\n");
-   fprintf(stderr,"          -s   stereo\n");
    fprintf(stderr,"          -c   show construction lines\n");
    fprintf(stderr,"Key Strokes\n");
    fprintf(stderr,"  arrow keys   rotate left/right/up/down\n");
@@ -756,8 +706,7 @@ void GiveUsage(char *cmd)
    exit(-1);
 }
 
-void Normalise(XYZ *p)
-{
+void Normalise (XYZ *p) {
    double length;
 
    length = sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
@@ -772,8 +721,7 @@ void Normalise(XYZ *p)
    }
 }
 
-XYZ CalcNormal(XYZ p,XYZ p1,XYZ p2)
-{
+XYZ CalcNormal (XYZ p,XYZ p1,XYZ p2) {
    XYZ n,pa,pb;
 
    pa.x = p1.x - p.x;
@@ -796,8 +744,7 @@ XYZ CalcNormal(XYZ p,XYZ p1,XYZ p2)
 /*
    Move the camera to the home position 
 */
-void CameraHome(int mode)
-{
+void CameraHome (int mode) {
    camera.aperture = 50;
    camera.focallength = 70;
    camera.eyesep = camera.focallength / 20;
@@ -827,8 +774,7 @@ void CameraHome(int mode)
 /*
    Handle mouse motion
 */
-void HandleMouseMotion(int x,int y)
-{
+void HandleMouseMotion (int x,int y) {
    static int xlast=-1,ylast=-1;
    int dx,dy;
 
