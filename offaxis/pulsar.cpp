@@ -1,59 +1,10 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <glut.h>
-#include "glcv.hpp"
+#include "pulsar.hpp"
 
 /*
    Demonstration OpenGL application
    Create a model of a pulsar
 */
-
-typedef struct {
-   double x,y,z;
-} XYZ;
-typedef struct {
-   double r,g,b;
-} COLOUR;
-typedef struct {
-   unsigned char r,g,b,a;
-} PIXELA;
-typedef struct {
-   XYZ vp;              /* View position           */
-   XYZ vd;              /* View direction vector   */
-   XYZ vu;              /* View up direction       */
-   XYZ pr;              /* Point to rotate about   */
-   double focallength;  /* Focal Length along vd   */
-   double aperture;     /* Camera aperture         */
-   double eyesep;       /* Eye separation          */
-   int screenwidth,screenheight;
-} CAMERA;
-
-void Display(void);
-void CreateEnvironment(void);
-void MakeGeometry(void);
-void MakeLighting(void);
-void HandleKeyboard(unsigned char key,int x, int y);
-void HandleSpecialKeyboard(int key,int x, int y);
-void HandleMouse(int,int,int,int);
-void HandleMainMenu(int);
-void HandleSpeedMenu(int);
-void HandleSpinMenu(int);
-void HandleVisibility(int vis);
-void HandleReshape(int,int);
-void HandleMouseMotion(int,int);
-void HandlePassiveMotion(int,int);
-void HandleIdle(void);
-void GiveUsage(char *);
-void RotateCamera(int,int,int);
-void TranslateCamera(int,int);
-void CameraHome(int);
-void Normalise(XYZ *);
-XYZ  CalcNormal(XYZ,XYZ,XYZ);
-
 #define ABS(x) (x < 0 ? -(x) : (x))
-//#define MIN(x,y) (x < y ? x : y)
-//#define MAX(x,y) (x > y ? x : y)
 #define TRUE  1
 #define FALSE 0
 #define ESC 27
@@ -73,7 +24,7 @@ int debug = FALSE;
 int rotate = TRUE;
 
 int currentbutton = -1;
-double rotatespeed = 1;
+double rotatespeed = 0.3;
 double dtheta = 1;
 CAMERA camera;
 XYZ origin = {0.0,0.0,0.0};
@@ -84,12 +35,15 @@ double rotateangle = 0.0;    /* Pulsar Rotation angle */
 int leftwindow;
 int rightwindow;
 
-int main (int argc,char **argv) {
+int start (int argc, char *argv[], int loffset, int roffset) {
    int i;
    int mainmenu,speedmenu,spinmenu;
 
-   camera.screenwidth = 400;
-   camera.screenheight = 300;
+    printf("opengl start %d,%d\n", loffset, roffset);
+   //camera.screenwidth = 400;
+   //camera.screenheight = 300;
+   camera.screenwidth = 1280;
+   camera.screenheight = 768;
 
    /* Parse the command line arguments */
    for (i=1;i<argc;i++) {
@@ -109,7 +63,8 @@ int main (int argc,char **argv) {
 
    leftwindow = glutCreateWindow("Left");
    //glutReshapeWindow(200,180);
-    glutPositionWindow(100,100);
+   glutReshapeWindow(1280,768);
+   glutPositionWindow(loffset,100);
    if (fullscreen)
       glutFullScreen();
    glutDisplayFunc(Display);
@@ -125,7 +80,8 @@ int main (int argc,char **argv) {
     
     // rightwindow
     rightwindow = glutCreateWindow("Right");
-    glutPositionWindow(400,100);
+    glutReshapeWindow(1280,768);
+    glutPositionWindow(roffset,100);
     glutDisplayFunc(Display);
     glutReshapeFunc(HandleReshape);
     glutVisibilityFunc(HandleVisibility);
