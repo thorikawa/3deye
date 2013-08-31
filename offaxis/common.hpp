@@ -3,12 +3,12 @@
 
 #define IN_WIDTH 320
 #define IN_HEIGHT 240
-#define WIDTH 800
-#define HEIGHT 600
+#define WIDTH 1440
+#define HEIGHT 900
 #define DEBUG 0
 
-#define LEFT_X_OFFSET -1400
-#define RIGHT_X_OFFSET 1400
+#define LEFT_X_OFFSET -1440
+#define RIGHT_X_OFFSET 1440
 #define MONITOR_X_OFFSET 0
 
 #endif

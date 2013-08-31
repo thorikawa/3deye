@@ -11,11 +11,7 @@ private:
     const static int CORNER_ROW = 4;
     const static int CORNER_COLUMN = 5;
     const static int CORNER_COUNT = CORNER_ROW * CORNER_COLUMN;
-    int phase;
     int notFindCount;
-    bool prevfind;
-    CvPoint prevPoint;
-    CvScalar color;
     IplImage *chessboard;
     double *storage;
     CvMat homography;

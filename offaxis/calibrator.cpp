@@ -1,9 +1,8 @@
 #include "calibrator.hpp"
 
-#define WINDOW_NAME "calibrator"
 #define MONITOR_NAME "monitor"
 
-Calibrator::Calibrator():notFindCount(0),prevfind(false),color(CV_RGB(255,255,255)),phase(0),skipCount(0) {
+Calibrator::Calibrator():notFindCount(0) {
     chessboard = cvLoadImage("chessboard.jpg");
     storage = (double*)malloc(sizeof(double)*9);
     homography = cvMat(3, 3, CV_64F, storage);
@@ -13,40 +12,50 @@ Calibrator::Calibrator():notFindCount(0),prevfind(false),color(CV_RGB(255,255,25
 
 void Calibrator::start(CvCapture* capture, Calibrator::Eye eye) {
 
-    cvNamedWindow(WINDOW_NAME, 0);
-    cvNamedWindow(MONITOR_NAME, 0);
+    skipCount = 0;
+    int xOffset = 0;
+    char windowName[256];
 
     if (eye == Calibrator::LEFT) {
         fprintf(stderr, "left eye calibration\n");
-        cvMoveWindow(WINDOW_NAME, LEFT_X_OFFSET, 0);
+        xOffset = LEFT_X_OFFSET;
+        sprintf(windowName, "calibrator_left");
     } else if (eye == Calibrator::RIGHT) {
         fprintf(stderr, "right eye calibration\n");
-        cvMoveWindow(WINDOW_NAME, RIGHT_X_OFFSET, 0);
+        xOffset = RIGHT_X_OFFSET;
+        sprintf(windowName, "calibrator_right");
     }
+    cvNamedWindow(windowName, 0);
+    cvNamedWindow(MONITOR_NAME, 0);
+    cvMoveWindow(windowName, xOffset, 0);
     cvMoveWindow(MONITOR_NAME, MONITOR_X_OFFSET, 0);
 
     IplImage *frame = 0;
-    IplImage *dst = cvCreateImage(cvSize(WIDTH, HEIGHT), IPL_DEPTH_8U, 3);
 
 	while (1) {
 		frame = cvQueryFrame(capture);
         if (!frame) {
             continue;
         }
+        IplImage *dst = cvCreateImage(cvSize(WIDTH, HEIGHT), IPL_DEPTH_8U, 3);
+        cvSet (dst, cvScalarAll(0), 0);
         if (calibrate(frame, dst)) {
             fprintf(stderr, "calibration done\n");
+            cvReleaseImage(&dst);
             break;
         }
         cvShowImage(MONITOR_NAME, frame);
-        cvShowImage(WINDOW_NAME, dst);
+        cvShowImage(windowName, dst);
+        cvReleaseImage(&dst);
 
         char c = cvWaitKey(2);
-		if (c == '\x1b')
-			break;
+        if (c == '\x1b') {
+            cvReleaseImage(&dst);
+            break;
+        }
     }
 
-    cvReleaseImage(&dst);
-    cvDestroyWindow(WINDOW_NAME);
+    cvDestroyWindow(windowName);
     cvDestroyWindow(MONITOR_NAME);
 }
 
@@ -61,6 +70,7 @@ bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
     int tw   = cw;
     int th   = ch;
 
+    //fprintf(stderr, "%d %d %d %d\n", offx,offy, tw, th);
     cvSetImageROI(destImage, cvRect(offx, offy, tw, th));
     cvCopy(chessboard, destImage);
     cvResetImageROI(destImage);
@@ -72,7 +82,7 @@ bool Calibrator::calibrate(IplImage* inputImage, IplImage* destImage) {
     CvSize patternSize = cvSize(CORNER_COLUMN, CORNER_ROW);
     CvPoint2D32f* corners = (CvPoint2D32f*)cvAlloc(sizeof(CvPoint2D32f) * CORNER_COUNT);
     int ret = cvFindChessboardCorners(inputImage, patternSize, corners, &cornerCount);
-    fprintf(stderr, "chess ret=%d corners=%d\n", ret, cornerCount);
+    // fprintf(stderr, "chess ret=%d corners=%d\n", ret, cornerCount);
     if (ret) {
         if (++skipCount < 5) {
             return false;
