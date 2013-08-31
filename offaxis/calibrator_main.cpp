@@ -2,11 +2,17 @@
 #include "common.hpp"
 
 int main (int argc, char *argv[]) {
+    CvCapture* capture = cvCreateCameraCapture(0);
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, IN_WIDTH);
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, IN_HEIGHT);
+
     Calibrator* lCalibrator = new Calibrator();
-    lCalibrator->start(Calibrator::LEFT);
+    lCalibrator->start(capture, Calibrator::LEFT);
 
     Calibrator* rCalibrator = new Calibrator();
-    rCalibrator->start(Calibrator::RIGHT);
+    rCalibrator->start(capture, Calibrator::RIGHT);
+
+    cvReleaseCapture(&capture);
 
     int centerX = (lCalibrator->leftTop.x + rCalibrator->leftTop.x) / 2;
     int centerY = (lCalibrator->leftTop.y + rCalibrator->leftTop.y) / 2;

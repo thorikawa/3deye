@@ -11,7 +11,7 @@ Calibrator::Calibrator():notFindCount(0),prevfind(false),color(CV_RGB(255,255,25
     hRatio = (double)HEIGHT / (double)IN_HEIGHT;
 }
 
-void Calibrator::start(Calibrator::Eye eye) {
+void Calibrator::start(CvCapture* capture, Calibrator::Eye eye) {
 
     cvNamedWindow(WINDOW_NAME, 0);
     cvNamedWindow(MONITOR_NAME, 0);
@@ -25,11 +25,8 @@ void Calibrator::start(Calibrator::Eye eye) {
     }
     cvMoveWindow(MONITOR_NAME, MONITOR_X_OFFSET, 0);
 
-    CvCapture* capture = cvCreateCameraCapture(0);
-	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, IN_WIDTH);
-	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, IN_HEIGHT);
     IplImage *frame = 0;
-    IplImage *dst = cvCreateImage( cvSize(WIDTH, HEIGHT), IPL_DEPTH_8U, 3);
+    IplImage *dst = cvCreateImage(cvSize(WIDTH, HEIGHT), IPL_DEPTH_8U, 3);
 
 	while (1) {
 		frame = cvQueryFrame(capture);
@@ -49,7 +46,6 @@ void Calibrator::start(Calibrator::Eye eye) {
     }
 
     cvReleaseImage(&dst);
-    cvReleaseCapture(&capture);
     cvDestroyWindow(WINDOW_NAME);
     cvDestroyWindow(MONITOR_NAME);
 }
