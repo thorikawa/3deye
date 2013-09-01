@@ -3,6 +3,7 @@
 #include <cmath>
 #include <glut.h>
 #include "glcv.hpp"
+#include "common.hpp"
 
 typedef struct {
     double x,y,z;

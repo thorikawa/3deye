@@ -15,6 +15,8 @@
    p3.x = p1.y*p2.z - p1.z*p2.y; \
    p3.y = p1.z*p2.x - p1.x*p2.z; \
    p3.z = p1.x*p2.y - p1.y*p2.x
+#define DIFF_X 120
+#define DIFF_Y 220
 
 /* Flags */
 int fullscreen = FALSE;
@@ -39,7 +41,7 @@ int start (int argc, char *argv[], int loffset, int roffset) {
    int i;
    int mainmenu,speedmenu,spinmenu;
 
-    printf("opengl start %d,%d\n", loffset, roffset);
+   printf("opengl start %d,%d\n", loffset, roffset);
    //camera.screenwidth = 400;
    //camera.screenheight = 300;
    camera.screenwidth = 1280;
@@ -63,8 +65,10 @@ int start (int argc, char *argv[], int loffset, int roffset) {
 
    leftwindow = glutCreateWindow("Left");
    //glutReshapeWindow(200,180);
-   glutReshapeWindow(1280,768);
-   glutPositionWindow(loffset,100);
+   //glutReshapeWindow(1280,768);
+    glutReshapeWindow(WIDTH, HEIGHT);
+   //glutPositionWindow(loffset, 100);
+    glutPositionWindow(loffset + (DIFF_X/2), + (-DIFF_Y/2));
    if (fullscreen)
       glutFullScreen();
    glutDisplayFunc(Display);
@@ -80,8 +84,8 @@ int start (int argc, char *argv[], int loffset, int roffset) {
     
     // rightwindow
     rightwindow = glutCreateWindow("Right");
-    glutReshapeWindow(1280,768);
-    glutPositionWindow(roffset,100);
+    glutReshapeWindow(WIDTH,HEIGHT);
+    glutPositionWindow(roffset + (-DIFF_X/2), (DIFF_Y/2));
     glutDisplayFunc(Display);
     glutReshapeFunc(HandleReshape);
     glutVisibilityFunc(HandleVisibility);

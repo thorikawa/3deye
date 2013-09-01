@@ -27,6 +27,7 @@ public:
     CvPoint convertCoordinates(CvPoint p);
     // The left top point of chess board on camera
     CvPoint leftTop;
+    CvPoint center;
 };
 
 #endif
