@@ -3,4 +3,4 @@
 
 3d display for naked eyes with no glass
 
-あいうえお
+かきくけこ
